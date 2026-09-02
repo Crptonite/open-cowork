@@ -507,13 +507,23 @@ export class RemoteManager extends EventEmitter {
 
   /**
    * Clear remote session
+   *
+   * Accepts either the router-side remote id (`remote-*`) or the actual agent
+   * session id, and normalizes internally — a caller passing the "wrong" id
+   * kind must not silently skip the persistent teardown (which would leave
+   * remoteSessionIds populated and reintroduce the mapping leak).
    */
   async clearRemoteSession(sessionId: string): Promise<boolean> {
-    const actualSessionId = this.reverseSessionIdMapping.get(sessionId);
+    let remoteSessionId = sessionId;
+    let actualSessionId = this.reverseSessionIdMapping.get(sessionId);
+    if (!actualSessionId && this.sessionIdMapping.has(sessionId)) {
+      actualSessionId = sessionId;
+      remoteSessionId = this.sessionIdMapping.get(sessionId)!;
+    }
     if (actualSessionId) {
       await this.removeRemoteSession(actualSessionId);
     }
-    return this.messageRouter.clearSession(sessionId);
+    return this.messageRouter.clearSession(remoteSessionId);
   }
 
   /**

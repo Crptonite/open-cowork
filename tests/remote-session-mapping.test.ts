@@ -151,4 +151,33 @@ describe('RemoteManager multi-turn session mapping (issue #291)', () => {
     await route(manager, makeMessage('stdio-cascade', 'again'));
     expect(startSession).toHaveBeenCalledTimes(2);
   });
+
+  it('clearRemoteSession also accepts the actual session id (id-agnostic)', async () => {
+    await route(manager, makeMessage('stdio-agnostic', 'hi'));
+    const actualSessionId = 'actual-session-1';
+
+    // A caller passing the actual (internal) session id must still trigger the
+    // full teardown — otherwise remoteSessionIds would stay populated and the
+    // mapping leak would resurface through this path.
+    expect(await manager.clearRemoteSession(actualSessionId)).toBe(true);
+    expect(manager.isRemoteSession(actualSessionId)).toBe(false);
+    expect(manager.getRemoteSessionId(actualSessionId)).toBeUndefined();
+
+    await route(manager, makeMessage('stdio-agnostic', 'again'));
+    expect(startSession).toHaveBeenCalledTimes(2);
+  });
+
+  it('clearRemoteSession with an unknown id is a harmless no-op', async () => {
+    await route(manager, makeMessage('stdio-unknown', 'hi'));
+    const actualSessionId = 'actual-session-1';
+
+    expect(await manager.clearRemoteSession('remote-does-not-exist')).toBe(false);
+
+    // Existing state untouched: the next message still continues the session.
+    expect(manager.isRemoteSession(actualSessionId)).toBe(true);
+    await manager.clearSessionBuffer(actualSessionId);
+    await route(manager, makeMessage('stdio-unknown', 'again'));
+    expect(continueSession).toHaveBeenCalledTimes(1);
+    expect(startSession).toHaveBeenCalledTimes(1);
+  });
 });
