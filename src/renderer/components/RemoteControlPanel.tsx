@@ -24,6 +24,7 @@ import type {
   ConfigStep,
   LocalizedBanner,
 } from './remote/types';
+import { isFeishuWebhookVerificationTokenMissing } from '../../shared/feishu-webhook-config';
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
 
@@ -44,6 +45,7 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
   // Form state
   const [feishuAppId, setFeishuAppId] = useState('');
   const [feishuAppSecret, setFeishuAppSecret] = useState('');
+  const [feishuVerificationToken, setFeishuVerificationToken] = useState('');
   const [feishuDmPolicy, setFeishuDmPolicy] = useState('pairing');
   const [gatewayPort, setGatewayPort] = useState(18789);
   const [defaultWorkingDirectory, setDefaultWorkingDirectory] = useState('');
@@ -98,6 +100,7 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
         if (configResult.channels?.feishu) {
           setFeishuAppId(configResult.channels.feishu.appId || '');
           setFeishuAppSecret(configResult.channels.feishu.appSecret || '');
+          setFeishuVerificationToken(configResult.channels.feishu.verificationToken || '');
           setFeishuDmPolicy(configResult.channels.feishu.dm?.policy || 'pairing');
           setUseLongConnection(configResult.channels.feishu.useWebSocket !== false);
         }
@@ -147,6 +150,24 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
 
   async function saveConfig() {
     if (!isElectron) return;
+
+    const feishuConfig =
+      feishuAppId && feishuAppSecret
+        ? {
+            type: 'feishu' as const,
+            appId: feishuAppId,
+            appSecret: feishuAppSecret,
+            verificationToken: feishuVerificationToken.trim() || undefined,
+            useWebSocket: useLongConnection,
+            dm: { policy: feishuDmPolicy as 'open' | 'pairing' | 'allowlist' },
+          }
+        : null;
+
+    if (feishuConfig && isFeishuWebhookVerificationTokenMissing(feishuConfig)) {
+      setError({ key: 'remote.verificationTokenRequired' });
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     try {
@@ -164,14 +185,14 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
             : { enabled: false, type: 'ngrok' },
       });
 
-      if (feishuAppId && feishuAppSecret) {
-        await window.electronAPI.remote.updateFeishuConfig({
-          type: 'feishu',
-          appId: feishuAppId,
-          appSecret: feishuAppSecret,
-          useWebSocket: useLongConnection,
-          dm: { policy: feishuDmPolicy as 'open' | 'pairing' | 'allowlist' },
-        });
+      if (feishuConfig) {
+        const feishuResult = await window.electronAPI.remote.updateFeishuConfig(feishuConfig);
+        if (!feishuResult.success) {
+          setError(
+            feishuResult.error ? { text: feishuResult.error } : { key: 'remote.saveFailed' }
+          );
+          return;
+        }
       }
 
       setSuccess({ key: 'remote.configSaved' });
@@ -234,8 +255,10 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
   }
 
   const isFeishuConfigured = !!(feishuAppId && feishuAppSecret);
+  const hasWebhookVerificationToken = !!feishuVerificationToken.trim();
   const isConnectionConfigured =
-    useLongConnection || (tunnelEnabled && !!ngrokAuthToken) || !!tunnelStatus?.connected;
+    (useLongConnection || (tunnelEnabled && !!ngrokAuthToken) || !!tunnelStatus?.connected) &&
+    (useLongConnection || hasWebhookVerificationToken);
   const permissionSeparator = i18n.language.startsWith('zh') ? '、' : ', ';
   const permissionScopes = [
     'im:resource',
@@ -310,12 +333,14 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
         {activeStep === 'connection' && (
           <ConnectionConfigStep
             useLongConnection={useLongConnection}
+            verificationToken={feishuVerificationToken}
             tunnelEnabled={tunnelEnabled}
             ngrokAuthToken={ngrokAuthToken}
             gatewayPort={gatewayPort}
             tunnelStatus={tunnelStatus}
             webhookUrl={webhookUrl}
             onLongConnectionChange={setUseLongConnection}
+            onVerificationTokenChange={setFeishuVerificationToken}
             onTunnelEnabledChange={setTunnelEnabled}
             onNgrokAuthTokenChange={setNgrokAuthToken}
             onCopy={copyToClipboard}

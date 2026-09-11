@@ -53,6 +53,7 @@ export interface RemoteConfig {
     feishu?: {
       appId: string;
       appSecret: string;
+      verificationToken?: string;
       useWebSocket?: boolean;
       dm: {
         policy: string;
