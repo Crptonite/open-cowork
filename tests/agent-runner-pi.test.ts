@@ -130,4 +130,12 @@ describe('CoworkAgentRunner Open Cowork SDK integration', () => {
     );
     expect(agentRunnerContent).toContain('START DOING IT');
   });
+
+  it('forwards flat runtimeConfig contextWindow and maxTokens into synthetic model resolution', () => {
+    const syntheticCall =
+      agentRunnerContent.match(/piModel = buildSyntheticPiModel\([\s\S]*?\);/)?.[0] || '';
+
+    expect(syntheticCall).toContain('runtimeConfig.contextWindow');
+    expect(syntheticCall).toContain('runtimeConfig.maxTokens');
+  });
 });
