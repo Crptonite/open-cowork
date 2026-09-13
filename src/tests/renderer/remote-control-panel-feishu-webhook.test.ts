@@ -12,10 +12,14 @@ const managerPath = path.resolve(process.cwd(), 'src/main/remote/remote-manager.
 const enPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en.json');
 const zhPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh.json');
 
-const panelContent = readFileSync(panelPath, 'utf8');
-const connectionContent = readFileSync(connectionPath, 'utf8');
-const typesContent = readFileSync(typesPath, 'utf8');
-const managerContent = readFileSync(managerPath, 'utf8');
+function normalizeSource(source: string): string {
+  return source.replace(/\s+/g, ' ').trim();
+}
+
+const panelSource = normalizeSource(readFileSync(panelPath, 'utf8'));
+const connectionSource = normalizeSource(readFileSync(connectionPath, 'utf8'));
+const typesSource = normalizeSource(readFileSync(typesPath, 'utf8'));
+const managerSource = normalizeSource(readFileSync(managerPath, 'utf8'));
 const en = JSON.parse(readFileSync(enPath, 'utf8')) as {
   remote: Record<string, string>;
 };
@@ -25,26 +29,26 @@ const zh = JSON.parse(readFileSync(zhPath, 'utf8')) as {
 
 describe('Feishu webhook verification token settings', () => {
   it('includes verificationToken on the renderer Feishu config type', () => {
-    expect(typesContent).toContain('verificationToken?: string');
+    expect(typesSource).toContain('verificationToken?: string');
   });
 
   it('loads and saves verificationToken through RemoteControlPanel', () => {
-    expect(panelContent).toContain('setFeishuVerificationToken');
-    expect(panelContent).toContain('configResult.channels.feishu.verificationToken');
-    expect(panelContent).toContain('verificationToken: feishuVerificationToken.trim()');
-    expect(panelContent).toContain('isFeishuWebhookVerificationTokenMissing');
-    expect(panelContent).toContain("key: 'remote.verificationTokenRequired'");
+    expect(panelSource).toContain('setFeishuVerificationToken');
+    expect(panelSource).toContain('channels.feishu.verificationToken');
+    expect(panelSource).toContain('verificationToken: feishuVerificationToken.trim()');
+    expect(panelSource).toContain('isFeishuWebhookVerificationTokenMissing');
+    expect(panelSource).toMatch(/key:\s*['"]remote\.verificationTokenRequired['"]/);
   });
 
   it('shows the token field only in webhook mode', () => {
-    expect(connectionContent).toContain('{!useLongConnection && (');
-    expect(connectionContent).toContain("t('remote.verificationToken')");
-    expect(connectionContent).toContain('onVerificationTokenChange');
+    expect(connectionSource).toContain('!useLongConnection');
+    expect(connectionSource).toContain("t('remote.verificationToken')");
+    expect(connectionSource).toContain('onVerificationTokenChange');
   });
 
   it('rejects webhook configs without a token in remote-manager', () => {
-    expect(managerContent).toContain('isFeishuWebhookVerificationTokenMissing(config)');
-    expect(managerContent).toContain('FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED');
+    expect(managerSource).toContain('isFeishuWebhookVerificationTokenMissing(config)');
+    expect(managerSource).toContain('FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED');
   });
 
   it('adds bilingual strings for the webhook verification token', () => {

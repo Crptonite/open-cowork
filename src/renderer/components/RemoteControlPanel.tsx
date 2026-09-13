@@ -185,19 +185,22 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
             : { enabled: false, type: 'ngrok' },
       });
 
+      let feishuSaved = true;
       if (feishuConfig) {
         const feishuResult = await window.electronAPI.remote.updateFeishuConfig(feishuConfig);
         if (!feishuResult.success) {
           setError(
             feishuResult.error ? { text: feishuResult.error } : { key: 'remote.saveFailed' }
           );
-          return;
+          feishuSaved = false;
         }
       }
 
-      setSuccess({ key: 'remote.configSaved' });
-      setTimeout(() => setSuccess(null), 3000);
-      await loadData();
+      if (feishuSaved) {
+        setSuccess({ key: 'remote.configSaved' });
+        setTimeout(() => setSuccess(null), 3000);
+        await loadData();
+      }
     } catch (err) {
       setError({ key: 'remote.saveFailed' });
     } finally {
