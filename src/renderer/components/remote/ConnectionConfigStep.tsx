@@ -10,6 +10,7 @@ import type { TunnelStatus } from './types';
 interface Props {
   useLongConnection: boolean;
   verificationToken: string;
+  encryptKey: string;
   tunnelEnabled: boolean;
   ngrokAuthToken: string;
   gatewayPort: number;
@@ -17,6 +18,7 @@ interface Props {
   webhookUrl: string | null;
   onLongConnectionChange: (value: boolean) => void;
   onVerificationTokenChange: (value: string) => void;
+  onEncryptKeyChange: (value: string) => void;
   onTunnelEnabledChange: (value: boolean) => void;
   onNgrokAuthTokenChange: (value: string) => void;
   onCopy: (text: string) => void;
@@ -25,6 +27,7 @@ interface Props {
 export function ConnectionConfigStep({
   useLongConnection,
   verificationToken,
+  encryptKey,
   tunnelEnabled,
   ngrokAuthToken,
   gatewayPort,
@@ -32,6 +35,7 @@ export function ConnectionConfigStep({
   webhookUrl,
   onLongConnectionChange,
   onVerificationTokenChange,
+  onEncryptKeyChange,
   onTunnelEnabledChange,
   onNgrokAuthTokenChange,
   onCopy,
@@ -141,6 +145,19 @@ export function ConnectionConfigStep({
                   <Copy className="w-4 h-4 text-text-muted" />
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-text-muted mb-1">{t('remote.encryptKey')}</label>
+              <input
+                type="password"
+                value={encryptKey}
+                onChange={(e) => onEncryptKeyChange(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full px-3 py-2 bg-surface-hover border border-border rounded-lg text-sm text-text-primary focus:border-accent focus:outline-none"
+                placeholder={t('remote.encryptKeyPlaceholder')}
+              />
+              <p className="text-xs text-text-muted mt-2">{t('remote.encryptKeyHint')}</p>
             </div>
 
             <div>

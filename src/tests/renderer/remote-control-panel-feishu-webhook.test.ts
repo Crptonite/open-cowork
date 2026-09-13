@@ -9,6 +9,10 @@ const connectionPath = path.resolve(
 );
 const typesPath = path.resolve(process.cwd(), 'src/renderer/components/remote/types.ts');
 const managerPath = path.resolve(process.cwd(), 'src/main/remote/remote-manager.ts');
+const channelPath = path.resolve(
+  process.cwd(),
+  'src/main/remote/channels/feishu/feishu-channel.ts'
+);
 const enPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/en.json');
 const zhPath = path.resolve(process.cwd(), 'src/renderer/i18n/locales/zh.json');
 
@@ -20,6 +24,7 @@ const panelSource = normalizeSource(readFileSync(panelPath, 'utf8'));
 const connectionSource = normalizeSource(readFileSync(connectionPath, 'utf8'));
 const typesSource = normalizeSource(readFileSync(typesPath, 'utf8'));
 const managerSource = normalizeSource(readFileSync(managerPath, 'utf8'));
+const channelSource = normalizeSource(readFileSync(channelPath, 'utf8'));
 const en = JSON.parse(readFileSync(enPath, 'utf8')) as {
   remote: Record<string, string>;
 };
@@ -27,36 +32,52 @@ const zh = JSON.parse(readFileSync(zhPath, 'utf8')) as {
   remote: Record<string, string>;
 };
 
-describe('Feishu webhook verification token settings', () => {
-  it('includes verificationToken on the renderer Feishu config type', () => {
+describe('Feishu webhook encryptKey and verificationToken settings', () => {
+  it('includes encryptKey and verificationToken on the renderer Feishu config type', () => {
     expect(typesSource).toContain('verificationToken?: string');
+    expect(typesSource).toContain('encryptKey?: string');
   });
 
-  it('loads and saves verificationToken through RemoteControlPanel', () => {
+  it('loads and saves both webhook secrets through RemoteControlPanel', () => {
     expect(panelSource).toContain('setFeishuVerificationToken');
+    expect(panelSource).toContain('setFeishuEncryptKey');
     expect(panelSource).toContain('channels.feishu.verificationToken');
+    expect(panelSource).toContain('channels.feishu.encryptKey');
     expect(panelSource).toContain('verificationToken: feishuVerificationToken.trim()');
-    expect(panelSource).toContain('isFeishuWebhookVerificationTokenMissing');
-    expect(panelSource).toMatch(/key:\s*['"]remote\.verificationTokenRequired['"]/);
+    expect(panelSource).toContain('encryptKey: feishuEncryptKey.trim()');
+    expect(panelSource).toContain('getFeishuWebhookConfigError');
+    expect(panelSource).toContain('remote.encryptKeyRequired');
+    expect(panelSource).toContain('remote.verificationTokenRequired');
   });
 
-  it('shows the token field only in webhook mode', () => {
+  it('shows encryptKey and verificationToken fields only in webhook mode', () => {
     expect(connectionSource).toContain('!useLongConnection');
+    expect(connectionSource).toContain("t('remote.encryptKey')");
+    expect(connectionSource).toContain('onEncryptKeyChange');
     expect(connectionSource).toContain("t('remote.verificationToken')");
     expect(connectionSource).toContain('onVerificationTokenChange');
   });
 
-  it('rejects webhook configs without a token in remote-manager', () => {
-    expect(managerSource).toContain('isFeishuWebhookVerificationTokenMissing(config)');
-    expect(managerSource).toContain('FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED');
+  it('rejects incomplete webhook configs in remote-manager', () => {
+    expect(managerSource).toContain('getFeishuWebhookConfigError(config)');
   });
 
-  it('adds bilingual strings for the webhook verification token', () => {
+  it('verifies X-Lark-Signature with encryptKey SHA256, not HMAC verificationToken', () => {
+    expect(channelSource).toContain("createHash('sha256')");
+    expect(channelSource).not.toContain('createHmac');
+    expect(channelSource).toContain('encryptKey + body');
+  });
+
+  it('adds bilingual strings for encryptKey and verificationToken', () => {
     for (const key of [
       'verificationToken',
       'verificationTokenPlaceholder',
       'verificationTokenHint',
       'verificationTokenRequired',
+      'encryptKey',
+      'encryptKeyPlaceholder',
+      'encryptKeyHint',
+      'encryptKeyRequired',
     ]) {
       expect(en.remote[key]).toBeTruthy();
       expect(zh.remote[key]).toBeTruthy();

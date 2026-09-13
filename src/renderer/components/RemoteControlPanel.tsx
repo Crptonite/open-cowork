@@ -24,7 +24,10 @@ import type {
   ConfigStep,
   LocalizedBanner,
 } from './remote/types';
-import { isFeishuWebhookVerificationTokenMissing } from '../../shared/feishu-webhook-config';
+import {
+  FEISHU_WEBHOOK_ENCRYPT_KEY_REQUIRED,
+  getFeishuWebhookConfigError,
+} from '../../shared/feishu-webhook-config';
 
 const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined;
 
@@ -46,6 +49,7 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
   const [feishuAppId, setFeishuAppId] = useState('');
   const [feishuAppSecret, setFeishuAppSecret] = useState('');
   const [feishuVerificationToken, setFeishuVerificationToken] = useState('');
+  const [feishuEncryptKey, setFeishuEncryptKey] = useState('');
   const [feishuDmPolicy, setFeishuDmPolicy] = useState('pairing');
   const [gatewayPort, setGatewayPort] = useState(18789);
   const [defaultWorkingDirectory, setDefaultWorkingDirectory] = useState('');
@@ -101,6 +105,7 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
           setFeishuAppId(configResult.channels.feishu.appId || '');
           setFeishuAppSecret(configResult.channels.feishu.appSecret || '');
           setFeishuVerificationToken(configResult.channels.feishu.verificationToken || '');
+          setFeishuEncryptKey(configResult.channels.feishu.encryptKey || '');
           setFeishuDmPolicy(configResult.channels.feishu.dm?.policy || 'pairing');
           setUseLongConnection(configResult.channels.feishu.useWebSocket !== false);
         }
@@ -158,13 +163,20 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
             appId: feishuAppId,
             appSecret: feishuAppSecret,
             verificationToken: feishuVerificationToken.trim() || undefined,
+            encryptKey: feishuEncryptKey.trim() || undefined,
             useWebSocket: useLongConnection,
             dm: { policy: feishuDmPolicy as 'open' | 'pairing' | 'allowlist' },
           }
         : null;
 
-    if (feishuConfig && isFeishuWebhookVerificationTokenMissing(feishuConfig)) {
-      setError({ key: 'remote.verificationTokenRequired' });
+    const webhookConfigError = feishuConfig ? getFeishuWebhookConfigError(feishuConfig) : null;
+    if (webhookConfigError) {
+      setError({
+        key:
+          webhookConfigError === FEISHU_WEBHOOK_ENCRYPT_KEY_REQUIRED
+            ? 'remote.encryptKeyRequired'
+            : 'remote.verificationTokenRequired',
+      });
       return;
     }
 
@@ -258,10 +270,10 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
   }
 
   const isFeishuConfigured = !!(feishuAppId && feishuAppSecret);
-  const hasWebhookVerificationToken = !!feishuVerificationToken.trim();
+  const hasWebhookCredentials = !!(feishuVerificationToken.trim() && feishuEncryptKey.trim());
   const isConnectionConfigured =
     (useLongConnection || (tunnelEnabled && !!ngrokAuthToken) || !!tunnelStatus?.connected) &&
-    (useLongConnection || hasWebhookVerificationToken);
+    (useLongConnection || hasWebhookCredentials);
   const permissionSeparator = i18n.language.startsWith('zh') ? '、' : ', ';
   const permissionScopes = [
     'im:resource',
@@ -337,6 +349,7 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
           <ConnectionConfigStep
             useLongConnection={useLongConnection}
             verificationToken={feishuVerificationToken}
+            encryptKey={feishuEncryptKey}
             tunnelEnabled={tunnelEnabled}
             ngrokAuthToken={ngrokAuthToken}
             gatewayPort={gatewayPort}
@@ -344,6 +357,7 @@ export function RemoteControlPanel({ isActive }: { isActive: boolean }) {
             webhookUrl={webhookUrl}
             onLongConnectionChange={setUseLongConnection}
             onVerificationTokenChange={setFeishuVerificationToken}
+            onEncryptKeyChange={setFeishuEncryptKey}
             onTunnelEnabledChange={setTunnelEnabled}
             onNgrokAuthTokenChange={setNgrokAuthToken}
             onCopy={copyToClipboard}

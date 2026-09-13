@@ -54,6 +54,7 @@ export interface RemoteConfig {
       appId: string;
       appSecret: string;
       verificationToken?: string;
+      encryptKey?: string;
       useWebSocket?: boolean;
       dm: {
         policy: string;

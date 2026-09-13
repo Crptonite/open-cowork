@@ -145,15 +145,15 @@ export class FeishuChannel extends ChannelBase {
     body: string,
     signature: string
   ): boolean {
-    const verificationToken = this.config?.verificationToken;
-    if (!verificationToken) return false; // Reject — verificationToken is required for webhook mode
+    // Official Feishu/Lark event callback signature:
+    // SHA256(timestamp + nonce + encryptKey + rawBody)
+    // See larksuite/node-sdk dispatcher/request-handle.ts checkIsEventValidated.
+    const encryptKey = this.config?.encryptKey;
+    if (!encryptKey) return false;
 
     try {
-      const content = timestamp + nonce + verificationToken + body;
-      const computedSignature = crypto
-        .createHmac('sha256', verificationToken)
-        .update(content)
-        .digest('hex');
+      const content = timestamp + nonce + encryptKey + body;
+      const computedSignature = crypto.createHash('sha256').update(content).digest('hex');
       const sigBuf = Buffer.from(signature, 'hex');
       const computedBuf = Buffer.from(computedSignature, 'hex');
       if (sigBuf.length !== computedBuf.length) return false;
@@ -189,8 +189,14 @@ export class FeishuChannel extends ChannelBase {
       const data = JSON.parse(body);
       log('[Feishu] Webhook data:', JSON.stringify(data, null, 2));
 
-      // Handle URL verification challenge
+      // Handle URL verification challenge. Signature uses encryptKey; the
+      // body token must match Verification Token when one is configured.
       if (data.type === 'url_verification') {
+        const expectedToken = this.config.verificationToken;
+        if (expectedToken && data.token !== expectedToken) {
+          logWarn('[Feishu] URL verification token mismatch');
+          return { status: 403, data: { error: 'Invalid verification token' } };
+        }
         log('[Feishu] URL verification challenge');
         return {
           status: 200,

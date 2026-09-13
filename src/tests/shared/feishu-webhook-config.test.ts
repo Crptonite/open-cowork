@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FEISHU_WEBHOOK_ENCRYPT_KEY_REQUIRED,
   FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED,
+  getFeishuWebhookConfigError,
+  isFeishuWebhookEncryptKeyMissing,
   isFeishuWebhookVerificationTokenMissing,
 } from '../../shared/feishu-webhook-config';
 
-describe('isFeishuWebhookVerificationTokenMissing', () => {
-  it('requires a token when webhook mode is selected', () => {
+describe('Feishu webhook config validation', () => {
+  it('requires encryptKey and verificationToken in webhook mode', () => {
     expect(
-      isFeishuWebhookVerificationTokenMissing({
+      isFeishuWebhookEncryptKeyMissing({
         useWebSocket: false,
-        verificationToken: undefined,
+        encryptKey: undefined,
       })
     ).toBe(true);
     expect(
@@ -18,29 +21,39 @@ describe('isFeishuWebhookVerificationTokenMissing', () => {
         verificationToken: '   ',
       })
     ).toBe(true);
-  });
-
-  it('accepts a non-empty token in webhook mode', () => {
     expect(
-      isFeishuWebhookVerificationTokenMissing({
+      getFeishuWebhookConfigError({
         useWebSocket: false,
-        verificationToken: 'feishu-verify-token',
+        encryptKey: undefined,
+        verificationToken: 'v_token',
       })
-    ).toBe(false);
-  });
-
-  it('does not require a token for long-connection mode', () => {
+    ).toBe(FEISHU_WEBHOOK_ENCRYPT_KEY_REQUIRED);
     expect(
-      isFeishuWebhookVerificationTokenMissing({
-        useWebSocket: true,
+      getFeishuWebhookConfigError({
+        useWebSocket: false,
+        encryptKey: 'enc',
         verificationToken: undefined,
       })
-    ).toBe(false);
+    ).toBe(FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED);
   });
-});
 
-describe('FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED', () => {
-  it('describes the webhook save contract', () => {
-    expect(FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED).toContain('verification token');
+  it('accepts webhook mode when both secrets are present', () => {
+    expect(
+      getFeishuWebhookConfigError({
+        useWebSocket: false,
+        encryptKey: 'enc',
+        verificationToken: 'v_token',
+      })
+    ).toBeNull();
+  });
+
+  it('does not require webhook secrets for long-connection mode', () => {
+    expect(
+      getFeishuWebhookConfigError({
+        useWebSocket: true,
+        encryptKey: undefined,
+        verificationToken: undefined,
+      })
+    ).toBeNull();
   });
 });

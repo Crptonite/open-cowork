@@ -25,10 +25,7 @@ import type {
   RemoteConfig,
 } from './types';
 import type { Message, ContentBlock, ServerEvent, Session } from '../../renderer/types/index';
-import {
-  FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED,
-  isFeishuWebhookVerificationTokenMissing,
-} from '../../shared/feishu-webhook-config';
+import { getFeishuWebhookConfigError } from '../../shared/feishu-webhook-config';
 
 // Agent executor interface - exported for use in main process
 export interface AgentExecutor {
@@ -359,8 +356,9 @@ export class RemoteManager extends EventEmitter {
    * Update feishu channel config
    */
   async updateFeishuConfig(config: FeishuChannelConfig): Promise<void> {
-    if (isFeishuWebhookVerificationTokenMissing(config)) {
-      throw new Error(FEISHU_WEBHOOK_VERIFICATION_TOKEN_REQUIRED);
+    const webhookConfigError = getFeishuWebhookConfigError(config);
+    if (webhookConfigError) {
+      throw new Error(webhookConfigError);
     }
 
     remoteConfigStore.setFeishuConfig(config);
