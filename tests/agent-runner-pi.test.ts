@@ -88,7 +88,7 @@ describe('CoworkAgentRunner Open Cowork SDK integration', () => {
   it('uses the normalized route protocol so openrouter follows the openai-compatible path', () => {
     expect(agentRunnerContent).toContain('resolvePiRouteProtocol');
     expect(agentRunnerContent).toContain('const configProtocol = resolvePiRouteProtocol(');
-    expect(agentRunnerContent).toContain('resolveSyntheticPiModelFallback');
+    expect(agentRunnerContent).toContain('buildSyntheticPiModelFromRuntimeConfig');
   });
 
   it('nudges the model to proceed with reasonable assumptions', () => {
@@ -132,10 +132,7 @@ describe('CoworkAgentRunner Open Cowork SDK integration', () => {
   });
 
   it('forwards flat runtimeConfig contextWindow and maxTokens into synthetic model resolution', () => {
-    const syntheticCall =
-      agentRunnerContent.match(/piModel = buildSyntheticPiModel\([\s\S]*?\);/)?.[0] || '';
-
-    expect(syntheticCall).toContain('runtimeConfig.contextWindow');
-    expect(syntheticCall).toContain('runtimeConfig.maxTokens');
+    expect(agentRunnerContent).toContain('buildSyntheticPiModelFromRuntimeConfig(runtimeConfig');
+    expect(agentRunnerContent).not.toContain('buildSyntheticPiModel(');
   });
 });

@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildSyntheticPiModel } from '../src/main/agent/pi-model-resolution';
+import {
+  buildSyntheticPiModel,
+  buildSyntheticPiModelFromRuntimeConfig,
+  resolvePiRouteProtocol,
+} from '../src/main/agent/pi-model-resolution';
 import { buildAgentRuntimeSignature } from '../src/main/config/agent-runtime-signature';
 
 const mocks = vi.hoisted(() => ({
@@ -179,13 +183,18 @@ describe('ConfigStore contextWindow/maxTokens projection', () => {
     const secondSetView = store.getAll();
     expect(secondSetView.contextWindow).toBeUndefined();
     expect(secondSetView.maxTokens).toBeUndefined();
+    expect('contextWindow' in secondSetView).toBe(false);
+    expect('maxTokens' in secondSetView).toBe(false);
 
     store.switchSet({ id: 'default' });
     expect(store.getAll().contextWindow).toBe(32000);
 
     store.switchSet({ id: secondSetId });
-    expect(store.getAll().contextWindow).toBeUndefined();
-    expect(store.getAll().maxTokens).toBeUndefined();
+    const clearedView = store.getAll();
+    expect(clearedView.contextWindow).toBeUndefined();
+    expect(clearedView.maxTokens).toBeUndefined();
+    expect('contextWindow' in clearedView).toBe(false);
+    expect('maxTokens' in clearedView).toBe(false);
   });
 
   it('rejects non-finite contextWindow/maxTokens instead of projecting Infinity', () => {
@@ -216,7 +225,7 @@ describe('ConfigStore contextWindow/maxTokens projection', () => {
     expect(config.profiles.ollama?.maxTokens).toBeUndefined();
   });
 
-  it('feeds projected overrides into synthetic model resolution instead of known-spec defaults', () => {
+  it('feeds projected overrides into the production synthetic-model path instead of known-spec defaults', () => {
     const store = new ConfigStore();
     store.update({
       provider: 'ollama',
@@ -243,16 +252,11 @@ describe('ConfigStore contextWindow/maxTokens projection', () => {
     expect(defaultModel.contextWindow).toBe(131072);
     expect(defaultModel.maxTokens).toBe(4096);
 
-    const configuredModel = buildSyntheticPiModel(
-      'llama3.3',
-      'ollama',
-      'openai',
-      runtimeConfig.baseUrl,
-      undefined,
-      undefined,
-      runtimeConfig.contextWindow,
-      runtimeConfig.maxTokens
-    );
+    const configuredModel = buildSyntheticPiModelFromRuntimeConfig(runtimeConfig, {
+      resolvedModelString: runtimeConfig.model,
+      routeProtocol: resolvePiRouteProtocol(runtimeConfig.provider, runtimeConfig.customProtocol),
+      effectiveBaseUrl: runtimeConfig.baseUrl,
+    });
     expect(configuredModel.contextWindow).toBe(32000);
     expect(configuredModel.maxTokens).toBe(8000);
   });

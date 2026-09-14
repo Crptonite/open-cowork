@@ -1,21 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import { buildAgentRuntimeSignature } from '../src/main/config/agent-runtime-signature';
-import type { AppConfig } from '../src/main/config/config-store';
+import type { AppConfig, MemoryRuntimeConfig } from '../src/main/config/config-store';
 
-const makeConfig = (overrides: Partial<AppConfig> = {}): AppConfig =>
-  ({
-    provider: 'ollama',
+const emptyMemoryRuntime: MemoryRuntimeConfig = {
+  llm: {
+    inheritFromActive: true,
     apiKey: '',
-    baseUrl: 'http://localhost:11434/v1',
-    customProtocol: 'openai',
-    model: 'llama3.3',
-    contextWindow: 32000,
-    maxTokens: 8000,
-    enableThinking: false,
-    memoryEnabled: true,
-    memoryRuntime: { useEmbedding: false },
-    ...overrides,
-  }) as AppConfig;
+    baseUrl: '',
+    model: '',
+    timeoutMs: 180000,
+  },
+  embedding: {
+    inheritFromActive: true,
+    apiKey: '',
+    baseUrl: '',
+    model: 'text-embedding-3-small',
+    timeoutMs: 180000,
+  },
+  useEmbedding: false,
+  maxNavSteps: 2,
+  ingestionConcurrency: 4,
+  storageRoot: '',
+};
+
+const makeConfig = (overrides: Partial<AppConfig> = {}): AppConfig => ({
+  provider: 'ollama',
+  apiKey: '',
+  baseUrl: 'http://localhost:11434/v1',
+  customProtocol: 'openai',
+  model: 'llama3.3',
+  contextWindow: 32000,
+  maxTokens: 8000,
+  activeProfileKey: 'ollama',
+  profiles: {},
+  activeConfigSetId: 'default',
+  configSets: [],
+  agentCliPath: '',
+  defaultWorkdir: '',
+  globalSkillsPath: '',
+  enableDevLogs: false,
+  theme: 'light',
+  sandboxEnabled: false,
+  memoryEnabled: true,
+  memoryRuntime: emptyMemoryRuntime,
+  enableThinking: false,
+  isConfigured: true,
+  ...overrides,
+});
 
 describe('buildAgentRuntimeSignature', () => {
   it('changes when only contextWindow changes', () => {
