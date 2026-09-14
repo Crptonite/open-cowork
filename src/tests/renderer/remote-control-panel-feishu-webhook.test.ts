@@ -68,6 +68,18 @@ describe('Feishu webhook encryptKey and verificationToken settings', () => {
     expect(channelSource).toContain('encryptKey + body');
   });
 
+  it('decrypts encrypted webhook envelopes with SDK AESCipher before event dispatch', () => {
+    expect(channelSource).toContain('AESCipher');
+    expect(channelSource).toContain('unwrapWebhookPayload');
+    expect(channelSource).not.toContain('Encrypted webhook not yet supported');
+    expect(channelSource).not.toContain('status: 501');
+  });
+
+  it('resets isSaving in finally after Feishu save failures', () => {
+    expect(panelSource).toContain('feishuSaved = false');
+    expect(panelSource).toContain('finally { setIsSaving(false); }');
+  });
+
   it('adds bilingual strings for encryptKey and verificationToken', () => {
     for (const key of [
       'verificationToken',
