@@ -29,6 +29,9 @@ export default defineConfig({
           args.startup();
         },
         vite: {
+          define: {
+            'import.meta.url': 'require("node:url").pathToFileURL(__filename).toString()',
+          },
           build: {
             outDir: 'dist-electron/main',
             rollupOptions: {
