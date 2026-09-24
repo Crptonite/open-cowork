@@ -3,7 +3,7 @@ module.exports = {
   darkMode: 'class',
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    './src/renderer/**/*.{js,ts,jsx,tsx}', // ✅ Only scan renderer UI files
   ],
   theme: {
     extend: {

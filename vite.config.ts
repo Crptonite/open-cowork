@@ -42,7 +42,7 @@ export default defineConfig({
                 'bufferutil',
                 'utf-8-validate',
                 'electron',
-                // Externalize large CJS-compatible main-process dependencies
+                // Externalize large CinJS-compatible main-process dependencies
                 // NOTE: ESM-only packages (@mariozechner/pi-coding-agent, pi-ai, electron-store, uuid)
                 // must stay bundled — CJS require() can't load them
                 '@anthropic-ai/sdk',
